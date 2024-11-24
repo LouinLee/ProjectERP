@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\OrderDetail;
 use App\Models\Product;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +13,8 @@ class ProductOrderChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        // Query to count occurrences of each product_code in the order_details table
-        $productCounts = DB::table('order_details')
-            ->select('product_code', DB::raw('count(*) as count'))
+        // Get the total quantity for each product in the order_details table
+        $productCounts = OrderDetail::select('product_code', DB::raw('sum(quantity) as total_quantity'))
             ->groupBy('product_code')
             ->get();
 
@@ -23,14 +23,12 @@ class ProductOrderChartWidget extends ChartWidget
         $data = [];
 
         // Loop through the product counts and prepare chart data
-        foreach ($productCounts as $product) {
-            // Get product details using the product_code
-            $productName = DB::table('products')
-                ->where('product_code', $product->product_code)
-                ->value('product_name'); // Get the product name
-
+        foreach ($productCounts as $productCount) {
+            // Get the related product using the product relationship
+            $productName = $productCount->product->product_name; // Access the product name
             $labels[] = $productName; // Product name
-            $data[] = $product->count; // Count of orders for this product
+
+            $data[] = $productCount->total_quantity; // Sum of quantities for this product
         }
 
         return [
